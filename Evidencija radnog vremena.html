@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Evidencija radnih sati studenata">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Evidencija Sati">
+    
+    <title>Evidencija Radnih Sati Studenata</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Install Banner */
+        .install-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .install-banner.show {
+            display: block;
+        }
+
+        .install-banner h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .install-banner p {
+            color: #6c757d;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .install-banner-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .student-form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 1.1em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: border 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .student-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .student-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+
+        .student-card:hover {
+            transform: translateX(5px);
+        }
+
+        .student-info h3 {
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 1.3em;
+        }
+
+        .student-info p {
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .time-entry-form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .report-controls {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .report-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1em;
+        }
+
+        .report-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 1.05em;
+        }
+
+        .report-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .settings-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .settings-section h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+
+        .rate-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rate-card.active {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .rate-info {
+            flex: 1;
+        }
+
+        .rate-info h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 1.2em;
+        }
+
+        .rate-info p {
+            color: #6c757d;
+            font-size: 1em;
+        }
+
+        .rate-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin-right: 20px;
+        }
+
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .form-row,
+            .time-inputs {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .tab {
+                font-size: 1em;
+                padding: 15px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Install Banner -->
+    <div class="install-banner" id="installBanner">
+        <h3>📱 Instalirajte Aplikaciju</h3>
+        <p>Dodajte ovu aplikaciju na početni zaslon za brži pristup!</p>
+        <div class="install-banner-buttons">
+            <button class="btn btn-primary" id="installBtn">Instaliraj</button>
+            <button class="btn btn-secondary" id="dismissBtn">Kasnije</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 Evidencija Radnih Sati Studenata</h1>
+            <p>Profesionalno upravljanje vremenom i troškovima</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('students')">👥 Studenti</button>
+            <button class="tab" onclick="switchTab('entry')">⏰ Unos Sati</button>
+            <button class="tab" onclick="switchTab('reports')">📈 Izvještaji</button>
+            <button class="tab" onclick="switchTab('settings')">⚙️ Postavke</button>
+        </div>
+
+        <div class="content">
+            <!-- Students Tab -->
+            <div id="students" class="tab-content active">
+                <div class="student-form">
+                    <h2 style="color: #667eea; margin-bottom: 20px; font-size: 1.6em;">Dodaj Novog Studenta</h2>
+                    <div class="form-group">
+                        <label for="studentName">Ime i Prezime Studenta</label>
+                        <input type="text" id="studentName" placeholder="Unesite ime studenta">
+                    </div>
+                    <button class="btn btn-primary" onclick="addStudent()">➕ Dodaj Studenta</button>
+                </div>
+
+                <h2 style="color: #495057; margin-bottom: 20px; font-size: 1.6em;">Aktivni Studenti</h2>
+                <div id="studentList" class="student-list"></div>
+            </div>
+
+            <!-- Time Entry Tab -->
+            <div id="entry" class="tab-content">
+                <div class="time-entry-form">
+                    <h2 style="color: #667eea; margin-bottom: 20px; font-size: 1.6em;">Evidencija Radnih Sati</h2>
+                    
+                    <div class="form-group">
+                        <label for="entryStudent">Odaberi Studenta</label>
+                        <select id="entryStudent"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entryDate">Datum</label>
+                        <input type="date" id="entryDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Radno Vrijeme</label>
+                        <div class="time-inputs">
+                            <div>
+                                <label style="font-size: 0.9em; font-weight: normal;">Početak</label>
+                                <select id="startTime"></select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; font-weight: normal;">Kraj</label>
+                                <select id="endTime"></select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; font-weight: normal;">Ukupno Sati</label>
+                                <input type="text" id="totalHours" readonly style="background: #e9ecef;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="currentRateInfo" style="background: #d1ecf1; padding: 15px; border-radius: 10px; margin-top: 15px;"></div>
+
+                    <button class="btn btn-primary" onclick="addTimeEntry()">💾 Spremi Unos</button>
+                </div>
+
+                <div id="entryMessage"></div>
+
+                <h2 style="color: #495057; margin-bottom: 20px; font-size: 1.6em;">Nedavni Unosi</h2>
+                <div id="recentEntries"></div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <div class="report-controls">
+                    <h2 style="color: #667eea; margin-bottom: 20px; font-size: 1.6em;">Generiraj Izvještaj</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reportStudent">Student</label>
+                            <select id="reportStudent"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportPeriod">Razdoblje</label>
+                            <select id="reportPeriod" onchange="updateReportInputs()">
+                                <option value="month">Mjesečni Izvještaj</option>
+                                <option value="year">Godišnji Izvještaj</option>
+                                <option value="custom">Prilagođeno Razdoblje</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row" id="monthYearInputs">
+                        <div class="form-group">
+                            <label for="reportMonth">Mjesec</label>
+                            <select id="reportMonth"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportYear">Godina</label>
+                            <select id="reportYear"></select>
+                        </div>
+                    </div>
+                    <div class="form-row" id="customDateInputs" style="display: none;">
+                        <div class="form-group">
+                            <label for="reportStartDate">Datum Početka</label>
+                            <input type="date" id="reportStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="reportEndDate">Datum Završetka</label>
+                            <input type="date" id="reportEndDate">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="generateReport()">📊 Generiraj Izvještaj</button>
+                    <button class="btn btn-success" onclick="exportToExcel()" id="exportBtn" style="display: none;">📥 Izvezi u Excel</button>
+                </div>
+
+                <div id="reportResults"></div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="tab-content">
+                <div class="settings-section">
+                    <h3>💰 Upravljanje Satnicom</h3>
+                    <p style="margin-bottom: 20px; color: #6c757d;">Postavite satnice s datumima stupanja na snagu. Sustav će automatski primijeniti ispravnu satnicu na temelju kada je rad obavljen.</p>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newHourlyRate">Satnica (EUR €)</label>
+                            <input type="number" id="newHourlyRate" step="0.01" placeholder="Unesite satnicu">
+                        </div>
+                        <div class="form-group">
+                            <label for="rateEffectiveDate">Vrijedi Od Datuma</label>
+                            <input type="date" id="rateEffectiveDate">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="addHourlyRate()">➕ Dodaj Novu Satnicu</button>
+
+                    <h4 style="color: #495057; margin: 30px 0 15px; font-size: 1.3em;">Povijest Satnica</h4>
+                    <div id="rateHistory"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>📋 Upravljanje Podacima</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">Izvezite ili obrišite sve podatke o radnom vremenu. Podaci se pohranjuju lokalno u vašem pregledniku.</p>
+                    <button class="btn btn-secondary" onclick="exportData()">📥 Izvezi Podatke (JSON Sigurnosna Kopija)</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Obriši Sve Podatke</button>
+                </div>
+
+                <div class="settings-section">
+                    <h3>ℹ️ Informacije o Aplikaciji</h3>
+                    <p style="color: #6c757d; line-height: 1.8;">
+                        <strong>Radno Vrijeme:</strong> 7:00 - 21:00<br>
+                        <strong>Radni Dani:</strong> Ponedjeljak - Subota<br>
+                        <strong>Isključeno:</strong> Nedjelje i Hrvatski Praznici<br>
+                        <strong>Uređaj:</strong> Optimizirano za Lenovo Tab 10<br>
+                        <strong>Tip:</strong> Progressive Web App (PWA)<br>
+                        <strong>Storage:</strong> Lokalna Pohrana (Trajno)<br>
+                        <strong>Offline:</strong> Radi bez interneta
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registriran'))
+                    .catch(err => console.log('Service Worker greška:', err));
+            });
+        }
+
+        // Install prompt
+        let deferredPrompt;
+        const installBanner = document.getElementById('installBanner');
+        const installBtn = document.getElementById('installBtn');
+        const dismissBtn = document.getElementById('dismissBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install banner after 3 seconds
+            setTimeout(() => {
+                if (!localStorage.getItem('installDismissed')) {
+                    installBanner.classList.add('show');
+                }
+            }, 3000);
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                return;
+            }
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('Korisnik je instalirao aplikaciju');
+            }
+            
+            deferredPrompt = null;
+            installBanner.classList.remove('show');
+        });
+
+        dismissBtn.addEventListener('click', () => {
+            installBanner.classList.remove('show');
+            localStorage.setItem('installDismissed', 'true');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instaliran');
+            installBanner.classList.remove('show');
+        });
+    </script>
+</body>
+</html>
